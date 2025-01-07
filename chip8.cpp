@@ -137,28 +137,28 @@ void Chip8::executeOpcode(uint16_t opcode)
     switch (opcode & 0xF000)
     {
     case 0x0000:
-        if (opcode == 0x00E0)
+        if (opcode == 0x00E0) // Clear Display
         {
             display.fill(0);
             drawFlag = true;
             pc += 2;
         }
-        else if (opcode == 0x00EE)
+        else if (opcode == 0x00EE) // Return from a subroutine, like return to a parent functions of sorts
         {
             --sp;
             pc = stack[sp];
             pc += 2;
         }
         break;
-    case 0x1000:
+    case 0x1000: // Jump to nnn in 1nnn
         pc = opcode & 0x0FFF;
         break;
-    case 0x2000:
+    case 0x2000: // 2nnn, current pc is put on top of stack and pc is set to nnn
         stack[sp] = pc;
         ++sp;
         pc = opcode & 0x0FFF;
         break;
-    case 0x3000:
+    case 0x3000: // 3xkk - if Vx=kk, then skip instruction
         if (V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
         {
             pc += 4;
@@ -168,7 +168,7 @@ void Chip8::executeOpcode(uint16_t opcode)
             pc += 2;
         }
         break;
-    case 0x4000:
+    case 0x4000: // 4xkk - skip instruction if Vx!=kk
         if (V[(opcode & 0xF00) >> 8] == (opcode & 0x00FF))
         {
             pc += 2;
@@ -178,7 +178,7 @@ void Chip8::executeOpcode(uint16_t opcode)
             pc += 4;
         }
         break;
-    case 0x5000:
+    case 0x5000: // 5xy0 - skip if Vx=Vy
         if (V[(opcode & 0x0F00) >> 8] == V[(opcode & 0x00F0) >> 4])
         {
             pc += 4;
@@ -188,38 +188,37 @@ void Chip8::executeOpcode(uint16_t opcode)
             pc += 2;
         }
         break;
-    case 0x6000:
+    case 0x6000: // 6xkk - set Vx to kk
         V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
         pc += 2;
         break;
-    case 0x7000:
+    case 0x7000: // 7xkk - add kk to Vx
         V[(opcode & 0x0F00) >> 8] += opcode & 0x00FF;
         pc += 2;
         break;
     case 0x8000:
         switch (opcode & 0x000F)
         {
-        case 0x0:
+        case 0x0: // 8xy0 - Vx = Vy
             V[x] = V[y];
             pc += 2;
             break;
-
-        case 0x1:
+        case 0x1: // 8xy1 - OR Vx ,Vy
             V[x] |= V[y];
             pc += 2;
             break;
 
-        case 0x2:
+        case 0x2: // 8xy2 - AND Vx ,Vy
             V[x] &= V[y];
             pc += 2;
             break;
 
-        case 0x3:
+        case 0x3: // 8xy3 - XOR Vx, Vy
             V[x] ^= V[y];
             pc += 2;
             break;
 
-        case 0x4:
+        case 0x4: // 8xy4 - ADD Vx, Vy
         {
             uint16_t sum = V[x] + V[y];
             V[0xF] = (sum > 0xFF) ? 1 : 0;
@@ -228,25 +227,25 @@ void Chip8::executeOpcode(uint16_t opcode)
             break;
         }
 
-        case 0x5: // 8xy5 - SUB Vx, Vy
+        case 0x5: // 8xy5 - SUB Vx - Vy
             V[0xF] = (V[x] > V[y]) ? 1 : 0;
             V[x] -= V[y];
             pc += 2;
             break;
 
-        case 0x6: // 8xy6 - SHR Vx
+        case 0x6: // 8xy6 - Shift right Vx
             V[0xF] = V[x] & 0x1;
             V[x] >>= 1;
             pc += 2;
             break;
 
-        case 0x7: // 8xy7 - SUBN Vx, Vy
+        case 0x7: // 8xy7 - SUBN Vy - Vx
             V[0xF] = (V[y] > V[x]) ? 1 : 0;
             V[x] = V[y] - V[x];
             pc += 2;
             break;
 
-        case 0xE: // 8xyE - SHL Vx
+        case 0xE: // 8xyE - shift left Vx
             V[0xF] = (V[x] & 0x80) >> 7;
             V[x] <<= 1;
             pc += 2;
@@ -257,7 +256,7 @@ void Chip8::executeOpcode(uint16_t opcode)
             break;
         }
         break;
-    case 0x9000:
+    case 0x9000: // 9xy0 - skip if Vx != Vy
         if (V[(opcode & 0x0F00) >> 8] != V[(opcode & 0x00F0) >> 4])
         {
             pc += 4;
@@ -267,18 +266,19 @@ void Chip8::executeOpcode(uint16_t opcode)
             pc += 2;
         }
         break;
-    case 0xA000:
+    case 0xA000: // Annn - set I to nnn
         I = opcode & 0x0FFF;
         pc += 2;
         break;
-    case 0xB000:
+    case 0xB000: // Bnn - Jump to nnn + v[0]
         pc = (opcode & 0x0FFF) + V[0];
         break;
-    case 0xC000:
+    case 0xC000: // Cxkk - Vx = rand byte under 255 AND kk
         V[(opcode & 0x0F00) >> 8] = (rand() % 256) & (opcode & 0x00FF);
         pc += 2;
         break;
-    case 0xD000:
+    case 0xD000: // Dxyn
+    // Refer Technical reference
     {
         uint8_t x = V[(opcode & 0x0F00) >> 8] % DISPLAY_WIDTH;
         uint8_t y = V[(opcode & 0x00F0) >> 4] % DISPLAY_HEIGHT;
@@ -309,7 +309,7 @@ void Chip8::executeOpcode(uint16_t opcode)
     case 0xE000:
         switch (opcode & 0x00FF)
         {
-        case 0x009E:
+        case 0x009E: // Skip next instruction if key value with Vx is pressed
             if (keypad[V[(opcode & 0x0F00) >> 8]])
             {
                 pc += 4;
@@ -319,7 +319,7 @@ void Chip8::executeOpcode(uint16_t opcode)
                 pc += 2;
             }
             break;
-        case 0x00A1:
+        case 0x00A1: // Skip next instruction if Key value with Vx is not pressed
             if (!keypad[V[(opcode & 0x0F00) >> 8]])
             {
                 pc += 4;
@@ -334,12 +334,12 @@ void Chip8::executeOpcode(uint16_t opcode)
     case 0xF000:
         switch (opcode & 0x00FF)
         {
-        case 0x07:
+        case 0x07: // Fx07 - Vx = delayTimer
             V[(opcode & 0x0F00) >> 8] = delayTimer;
             pc += 2;
             break;
 
-        case 0x0A:
+        case 0x0A: // Store value of key in Vx after waiting for key press
         {
             bool keyPressed = false;
             for (int i = 0; i < KEYPAD_SIZE; ++i)
@@ -359,27 +359,27 @@ void Chip8::executeOpcode(uint16_t opcode)
             break;
         }
 
-        case 0x15:
+        case 0x15: // Fx15 - set delayTimer to Vx
             delayTimer = V[(opcode & 0x0F00) >> 8];
             pc += 2;
             break;
 
-        case 0x18:
+        case 0x18: // Fx18 - set sounTimer to Vx
             soundTimer = V[(opcode & 0x0F00) >> 8];
             pc += 2;
             break;
 
-        case 0x1E:
+        case 0x1E: // Fx1E - I = I + Vx, location of sprite for Vx
             I += V[(opcode & 0x0F00) >> 8];
             pc += 2;
             break;
 
-        case 0x29:     
+        case 0x29: // Fx29 - Set location of sprite for digit Vx
             I = V[(opcode & 0x0F00) >> 8] * 5;
             pc += 2;
             break;
 
-        case 0x33:
+        case 0x33: // Store BCD of Vx in I, I+1, I+2
         {
             uint8_t value = V[(opcode & 0x0F00) >> 8];
             memory[I] = value / 100;
@@ -389,7 +389,7 @@ void Chip8::executeOpcode(uint16_t opcode)
             break;
         }
 
-        case 0x55:
+        case 0x55: // Fx55 - Store V0 to Vx starting at location I 
         {
             uint8_t x = (opcode & 0x0F00) >> 8;
             for (uint8_t i = 0; i <= x; ++i)
@@ -400,7 +400,7 @@ void Chip8::executeOpcode(uint16_t opcode)
             break;
         }
 
-        case 0x65:
+        case 0x65: // Fx65 - Read from memory at I into registers from V0 to Vx
         {
             uint8_t x = (opcode & 0x0F00) >> 8;
             for (uint8_t i = 0; i <= x; ++i)
